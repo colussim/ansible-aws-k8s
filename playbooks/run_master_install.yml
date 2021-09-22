@@ -1,0 +1,44 @@
+- hosts: kubernetes_master_nodes
+  become: yes
+  vars_files:
+  - env_variables
+  tasks:
+  - include_tasks: set_k8s_node.yml
+
+  - name: Run Master Configuration Setup kubernetes configuration
+    shell: |
+     sudo wget https://raw.githubusercontent.com/colussim/ansible-aws-k8s/main/k8sconf/setk8sconfig.yaml -O /tmp/setk8sconfig.yaml
+     sudo /usr/bin/kubeadm init --config /tmp/setk8sconfig.yaml
+    register: output
+
+  - name: Run Master Configuration Copying required files
+    shell: |
+     mkdir -p $HOME/.kube
+     mkdir -p /home/ec2-user/.kube
+     sudo /bin/cp /etc/kubernetes/admin.conf $HOME/.kube/config
+     sudo /bin/cp /etc/kubernetes/admin.conf /home/ec2-user/.kube/config
+     sudo chown $(id -u):$(id -g) $HOME/.kube/config
+     sudo chown -R ec2-user:users /home/ec2-user/.kube
+
+  - name: Install Network Add-on
+    shell: |
+      version=$(/usr/bin/kubectl version | base64 | tr -d '\n')
+      /usr/bin/kubectl apply -f https://cloud.weave.works/k8s/net?k8s-version=$version
+
+  - name: Run Master Configuration install kubernetes Dashboard
+    shell: |
+     /usr/bin/kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended.yaml
+     /usr/bin/kubectl apply -f https://raw.githubusercontent.com/colussim/ansible-aws-k8s/main/k8sconf/clusteradmin.yaml
+
+  - name: Get Kubernetes config files
+    ansible.builtin.fetch:
+     src: /etc/kubernetes/admin.conf
+     dest: /Users/manu/Documents/App/Ansible/AWS-k8s/playbooks/config
+     flat: yes
+
+  - name: Show Cluster K8s
+    shell: /usr/bin/kubectl get nodes
+    register: Node
+
+  - debug:
+         var: Node.stdout_lines

@@ -1,0 +1,37 @@
+- hosts: kubernetes_worker_nodes
+  become: yes
+  vars_files:
+  - env_variables
+  tasks:
+  - include_tasks: set_k8s_node.yml
+
+  - name: Copying token to worker nodes
+    copy: src={{ token_file }} dest=join_token
+
+  - name: Joining worker nodes with kubernetes master
+    shell: |
+       mkdir -p $HOME/.kube
+       mkdir -p /home/ec2-user/.kube
+       sh join_token
+
+  - name: Copy k8s configuration file for user root
+    ansible.builtin.copy:
+    src: playbooks/config
+    dest: $HOME/.kube/config
+    owner: root
+    group: root
+
+  - name: Copy k8s configuration file for user ec2-user
+    ansible.builtin.copy:
+    src: playbooks/config
+    dest: $HOME/.kube/config
+    owner: ec2-user
+    group: user
+
+
+  - name: Show Cluster K8s
+    shell: /usr/bin/kubectl get nodes
+    register: Node
+
+  - debug:
+         var: Node.stdout_lines

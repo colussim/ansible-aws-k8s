@@ -1,0 +1,42 @@
+# Private Hostname/IP Master Nodes
+MASTERS:
+ MASTER01:
+  nodename: ip-10-1-0-99
+  iplocalnode: 10.1.0.99
+
+# Private Hostname/IP Worker Nodes
+WORKERS:
+ WORKER01:
+  nodename: ip-10-1-0-235
+  iplocalnode: 10.1.0.235
+ WORKER02:
+   nodename: ip-10-1-1-59
+   iplocalnode: 10.1.1-59
+
+# CLUSTER K8S Nodes
+CLUSTER:
+  NODE1:
+   nodename: ip-10-1-0-99
+   iplocalnode: 10.1.0.99
+  NODE2:
+   nodename: ip-10-1-0-235
+   iplocalnode: 10.1.0.235
+  NODE3:
+   nodename: ip-10-1-1-59
+   iplocalnode: 10.1.1-59
+
+#Kernel parameters
+KERNEL:
+    parameter1:
+       name: net.ipv4.ip_forward
+       setvalue: 1
+    parameter2:
+          name: net.ipv4.conf.all.forwarding
+          setvalue: 1
+    parameter3:
+           name: net.bridge.bridge-nf-call-iptables
+           setvalue: 1
+
+
+# Variable command to join k8s cluster
+token_file: join_token

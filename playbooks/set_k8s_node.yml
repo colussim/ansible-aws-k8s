@@ -1,0 +1,89 @@
+  - name: Disabling Swap on all nodes
+    shell: swapoff -a
+
+  - name: Commenting Swap entries in /etc/fstab
+    replace:
+     path: /etc/fstab
+     regexp: '(^/.*swap*)'
+     replace: '# \1'
+
+  - name: Add IPs to /etc/hosts on masters and workers
+    lineinfile:
+     dest: /etc/hosts
+     line: "{{ item.value.iplocalnode }} {{ item.value.nodename }}"
+     state: present
+    with_dict: "{{ CLUSTER }}"
+
+  - name: Install YQ Tools and Set kernel modules
+    shell: |
+     sudo wget https://github.com/mikefarah/yq/releases/download/v4.2.0/yq_linux_amd64.tar.gz -O - | sudo tar xz && sudo mv yq_linux_amd64 /usr/bin/yq
+     sudo modprobe overlay
+     sudo modprobe br_netfilter
+
+  - name: SET kernel Parameters
+    lineinfile:
+     dest: /etc/sysctl.conf
+     line: "{{ item.value.name }}={{ item.value.setvalue }}"
+     state: present
+    with_dict: "{{ KERNEL }}"
+
+  - name: Update kernel Parameters
+    shell: sudo sysctl -p
+
+  - name: Add Kubernetes repos
+    community.general.zypper_repository:
+      #name:  home_dirkmueller_Factory_Staging
+      repo: 'https://download.opensuse.org/repositories/home:/dirkmueller:/Factory:/Staging/standard/home:dirkmueller:Factory:Staging.repo'
+      state: present
+      disable_gpg_check: yes
+
+  - name: Install CRI-O package
+    community.general.zypper:
+     name: 'cri-o'
+     state: present
+     disable_recommends: no
+
+  - name: Install CRI-TOOLS package
+    community.general.zypper:
+     name: 'cri-tools'
+     state: present
+     disable_recommends: no
+
+  - name: Install PODMAN package
+    community.general.zypper:
+     name: 'podman'
+     state: present
+     disable_recommends: no
+
+  - name: Remove the docker package
+    community.general.zypper:
+     name: docker
+     state: absent
+
+  - name: Start CRI-O
+    ansible.builtin.systemd:
+     state: started
+     name: crio
+
+  - name: Start kubelet
+    ansible.builtin.systemd:
+     name: kubelet
+     state: started
+     enabled: yes
+
+  - name: Just force systemd to reread configs
+    ansible.builtin.systemd:
+     daemon_reload: yes
+
+  - name: Add Kubectl repos
+    community.general.zypper_repository:
+     #name:  devel_CaaSP_Head_ControllerNode
+     repo: 'https://download.opensuse.org/repositories/devel:CaaSP:Head:ControllerNode/openSUSE_Tumbleweed/devel:CaaSP:Head:ControllerNode.repo'
+     state: present
+     disable_gpg_check: yes
+
+  - name: Install kubectl package
+    community.general.zypper:
+     name: 'kubectl'
+     state: present
+     disable_recommends: no

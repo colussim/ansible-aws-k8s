@@ -1,0 +1,34 @@
+- name: Reset Kubernetes Nodes
+  shell: |
+    kubeadm reset -f
+    sudo iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+
+    sudo systemctl stop kubelet
+    sudo systemctl stop crio
+
+    sudo zypper rm -y cri-o cri-tools
+    sudo zypper rm -y kubectl
+
+    sudo /bin/rm -r /root/.kube
+    /bin/rm -r {{ ansible_ssh_user }}/.kube
+    sudo /bin/rm -r /etc/kubernetes
+    sudo /bin/rm /tmp/setk8sconfig.yaml
+
+    sudo zypper rr 1
+    sudo zypper rr 1
+    sudo swapon -a
+
+- name: Delete IPs Node to /etc/hosts
+  lineinfile: dest=/etc/hosts
+          state=absent
+          regexp='{{ item.value.iplocalnode }} {{ item.value.nodename }}'
+  with_dict: "{{ CLUSTER }}"
+
+- name: Delete Kernel Parameters
+  lineinfile: dest=/etc/sysctl.conf
+      state=absent
+      regexp='{{ item.value.name }}={{ item.value.setvalue }}'
+  with_dict: "{{ KERNEL }}"
+
+- name: Update KERNEL
+  shell: sudo sysctl -p
