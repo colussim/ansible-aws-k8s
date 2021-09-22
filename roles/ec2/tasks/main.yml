@@ -1,0 +1,38 @@
+---
+- name: launch Master Node on AWS cloud
+  ec2:
+         key_name: "{{ keypair }}"
+         instance_type: "{{ instance_flavour }}"
+         image: "{{ ami_id }}"
+         wait: yes
+         count: 1
+         vpc_subnet_id: "{{ vpc_subnet_id }}"
+         group_id: "{{ sg_name }}"
+         assign_public_ip: yes
+         region: "{{ region_name }}"
+         state: present
+         aws_access_key: "{{ aws_access_key_id }}"
+         aws_secret_key: "{{ aws_secret_access_key }}"
+         instance_tags:
+           Name: "{{ master_tag }}"
+           Cluster: "{{ cluster_tag }}"
+           Role: "master"
+- name: launch Worker Node on AWS cloud
+  ec2:
+          key_name: "{{ keypair }}"
+          instance_type: "{{ instance_flavour }}"
+          image: "{{ ami_id }}"
+          wait: yes
+          count: 1
+          vpc_subnet_id: "{{ vpc_subnet_id }}"
+          group_id: "{{ sg_name }}"
+          assign_public_ip: yes
+          region: "{{ region_name }}"
+          state: present
+          aws_access_key: "{{ aws_access_key_id }}"
+          aws_secret_key: "{{ aws_secret_access_key }}"
+          instance_tags:
+            Name: "{{ item }}"
+            Cluster: "{{ cluster_tag }}"
+            Role: "worker"
+  loop: "{{ hosts_tag }}"

@@ -1,0 +1,2 @@
+---
+- import_playbook: playbooks/run_master_install.yml

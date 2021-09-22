@@ -1,0 +1,8 @@
+- hosts: localhost 
+  remote_user: root
+  vars_files:
+    - awscred.yml
+  tasks:
+    - name: Running EC2 Role
+      include_role:
+        name: ec2

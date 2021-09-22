@@ -1,0 +1,15 @@
+---
+# vars file for ec2
+cluster_tag: k8s02
+master_tag: Master01
+type_tag: worker
+workers_tag:
+ - Worker01
+ - Worker02
+
+sg_name: sg-0028373b0a03beb05
+region_name: us-east-1
+vpc_subnet_id: subnet-0cdb62d501c73f8ca
+ami_id: ami-04ec8d1d72a81ee63
+keypair: admin
+instance_flavour: t3a.xlarge
