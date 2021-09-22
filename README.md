@@ -41,5 +41,3 @@ or Clone the repository :
 
 <a href="https://docs.ansible.com/ansible/latest/scenario_guides/guide_aws.html" target="Ansible"><img src="/images/ansible-aws.png"> Ansible Amazon Web Services Guide</a>
 
-<a href="https://github.com/colussim/ansible-aws-k8s" target="GitHub"><img src="/images/github.png" style="height:30px;width:30px;"> Necessary files for this tutorial</a>
-
