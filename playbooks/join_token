@@ -1,1 +1,0 @@
-kubeadm join 10.1.0.99:6443 --token sq4ix6.venoi84l8l53m362 --discovery-token-ca-cert-hash sha256:60d7738768ddfe6896401fb7381d4537d745014fcad4fc33838a5071c56ebc70 
