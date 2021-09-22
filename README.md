@@ -1,4 +1,4 @@
-The purpose of this tutorial is to create 3 identical OpenSUSE LEAP 15.3 virtual machines in AWS that we will deploy only with Ansible.
+The purpose of this tutorial is to create 3 identical OpenSUSE Tumbleweed virtual machines in AWS that we will deploy only with Ansible.
 With the goal of using this infrastrucutre to deploy a kubernetes cluster .
 
 ## What is AWS EC2 ?
@@ -34,3 +34,12 @@ You can download all the necessary files on this link : <a href="https://github.
 or Clone the repository :
 
 **git clone https://github.com/colussim/ansible-aws-k8s.git**
+
+## Resources :
+
+   <a href="https://docs.ansible.com/ansible_community.html" target="Ansible"><img src="/images/ansible.png" style="height:30px;width:30px;"> Ansible Documentation</a>
+
+<a href="https://docs.ansible.com/ansible/latest/scenario_guides/guide_aws.html" target="Ansible"><img src="/images/ansible-aws.png"> Ansible Amazon Web Services Guide</a>
+
+<a href="https://github.com/colussim/ansible-aws-k8s" target="GitHub"><img src="/images/github.png" style="height:30px;width:30px;"> Necessary files for this tutorial</a>
+
