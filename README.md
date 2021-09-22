@@ -35,6 +35,9 @@ or Clone the repository :
 
 **git clone https://github.com/colussim/ansible-aws-k8s.git**
 
+
+Next step , see details [here](https://techlabnews.com/ansible-AWS-k8s/ "Deploy a Kubernetes cluster using Ansible in AWS")
+
 ## Resources :
 
    <a href="https://docs.ansible.com/ansible_community.html" target="Ansible"><img src="/images/ansible.png" style="height:30px;width:30px;"> Ansible Documentation</a>
