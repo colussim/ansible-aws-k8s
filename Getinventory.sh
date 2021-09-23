@@ -1,4 +1,17 @@
 #!/bin/bash
+#
+#
+#
+#  @project     AWS Ansible
+#  @package     Getinventory
+#  @subpackage
+#  @access
+#  @paramtype
+#  @argument
+#  @description Get PrivateIpAddress, PublicIpAddress and PrivateDnsName for each instance : MAster and Worker
+#
+#  @author Emmanuel COLUSSI
+#  @version 1.00
 
 # --------- Read Ansible config file for Role EC2 ---------
 
