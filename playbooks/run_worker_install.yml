@@ -12,19 +12,20 @@
     shell: |
        mkdir -p $HOME/.kube
        mkdir -p /home/ec2-user/.kube
+       chown -R ec2-user:user /home/ec2-user/.kube
        sh join_token
 
   - name: Copy k8s configuration file for user root
     ansible.builtin.copy:
-     src: playbooks/config
+     src: config
      dest: $HOME/.kube/config
      owner: root
      group: root
 
   - name: Copy k8s configuration file for user ec2-user
     ansible.builtin.copy:
-     src: playbooks/config
-     dest: $HOME/.kube/config
+     src: config
+     dest: /home/ec2-user/.kube/config
      owner: ec2-user
      group: user
 
