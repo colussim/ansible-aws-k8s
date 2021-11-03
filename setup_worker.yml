@@ -1,2 +1,2 @@
 ---
-- import_playbook: playbooks/configure_worker_node.yml
+- import_playbook: playbooks/run_worker_install.yml
