@@ -16,17 +16,17 @@
 
   - name: Copy k8s configuration file for user root
     ansible.builtin.copy:
-    src: playbooks/config
-    dest: $HOME/.kube/config
-    owner: root
-    group: root
+     src: playbooks/config
+     dest: $HOME/.kube/config
+     owner: root
+     group: root
 
   - name: Copy k8s configuration file for user ec2-user
     ansible.builtin.copy:
-    src: playbooks/config
-    dest: $HOME/.kube/config
-    owner: ec2-user
-    group: user
+     src: playbooks/config
+     dest: $HOME/.kube/config
+     owner: ec2-user
+     group: user
 
 
   - name: Show Cluster K8s
