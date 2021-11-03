@@ -27,7 +27,7 @@
      src: config
      dest: /home/ec2-user/.kube/config
      owner: ec2-user
-     group: user
+     group: users
 
 
   - name: Show Cluster K8s
