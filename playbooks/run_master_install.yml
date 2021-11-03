@@ -9,6 +9,7 @@
     shell: |
      sudo wget https://raw.githubusercontent.com/colussim/ansible-aws-k8s/main/k8sconf/setk8sconfig.yaml -O /tmp/setk8sconfig.yaml
      sudo /usr/bin/kubeadm init --config /tmp/setk8sconfig.yaml
+     sudo kubeadm token create --print-join-command > /tmp/joincluster.sh
     register: output
 
   - name: Run Master Configuration Copying required files
@@ -35,6 +36,13 @@
      src: /etc/kubernetes/admin.conf
      dest: /Users/manu/Documents/App/Ansible/AWS-k8s/playbooks/config
      flat: yes
+     
+  
+  - name: Get Join Cluster command
+    ansible.builtin.fetch:
+     src: /tmp/joincluster.sh
+     dest: /Users/manu/Documents/App/Ansible/AWS-k8s/playbooks/join_token
+     flat: yes   
 
   - name: Show Cluster K8s
     shell: /usr/bin/kubectl get nodes
