@@ -29,6 +29,9 @@
      owner: ec2-user
      group: users
 
+ - name: Set Worker role
+    shell: usr/bin/kubectl label node $HOSTNAME node-role.kubernetes.io/worker=worker
+    register: Node
 
   - name: Show Cluster K8s
     shell: /usr/bin/kubectl get nodes
