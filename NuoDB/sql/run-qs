@@ -1,0 +1,268 @@
+#!/bin/sh
+#
+# NuoDB SQL QuickStart script
+#
+# Usage:
+#   run-qs [<database name> [<domain user> [<domain password>]]]
+#
+#   <database name> can be any database name.  The default is "test"
+#
+#   The <domain user> and <domain password> settings determine how the SQL
+#   QuickStart connects to the NuoDB domain. If you specified a password during
+#   installation then enter "domain" for domain user and for domain password
+#   enter the password you entered during installation. If you have forgotten
+#   this password then you can obtain it from the
+#   NUODB_HOME/etc/default.properties file. In that file, the setting of the
+#   domainPassword property is the password you need to enter for domain
+#   password.  If you already created an administrative user account then you
+#   can enter the username and password for that account. See
+#   http://doc.nuodb.com/Latest/Default.htm#About-Domain-Credentials.htm for
+#   information about creating a domain administrator account.
+#
+# The script will create the database, populate it with sample data, and
+# end at a nuosql command prompt, where you can enter SQL commands.
+#
+# Does the following, on the local host:
+#
+# 1. Start a Broker (if necessary)
+# 2. Create a two-node database (one SM and one TE)
+# 3. Load the Hockey schema and data
+# 4. Launch nuosql, ready to perform SQL commands
+#
+# (C) Copyright NuoDB, Inc. 2011-2018  All Rights Reserved.
+
+# Unfortunately, ksh93 defines builtin aliases even when run non-interactively.
+unalias -a
+
+DOMAIN=domain
+
+DBNAME=${1:-test}
+DOMAIN_USER=$2
+DOMAIN_PWD=$3
+
+DBA_PWD=goalie
+DBA_USER=dba
+
+pause () {
+    printf "Press [enter] to continue ... "
+    read answer
+}
+
+die () { echo "$*"; pause; exit 1; }
+
+# Find the installation directory.
+CMD=${0##*/}
+DIR=$(cd "${0%$CMD}." && pwd)
+
+# Try to find the setup file.  This script lives in NUODB_HOME.
+if [ -z "$NUODB_HOME" ]; then
+    [ -f "$DIR"/etc/nuodb_setup.sh ] && NUODB_HOME=$DIR \
+        || NUODB_HOME=/opt/nuodb
+fi
+
+[ -f "$NUODB_HOME"/etc/nuodb_setup.sh ] \
+    || die "Cannot locate NuoDB installation ($NUODB_HOME)"
+
+. "$NUODB_HOME"/etc/nuodb_setup.sh 2>/dev/null \
+    || die "Invalid NuoDB installation at $NUODB_HOME"
+
+[ -x "$NUODB_HOME"/bin/nuodb ] \
+    || die "Invalid NuoDB installation directory: $NUODB_HOME"
+
+HOST=localhost
+
+# Tell all processes we start where the installation lives
+export NUODB_HOME
+export NUODB_CRASHDIR
+
+export PATH="$NUODB_HOME"/bin:$PATH
+
+# Prompt for the domain user
+while [ -z "$DOMAIN_USER" ]; do
+    printf "Enter Domain user (? for help): "
+    read DOMAIN_USER
+    if [ "$DOMAIN_USER" = "?" ]; then
+        echo 'Enter the name of your NuoDB Domain Administrator.'
+        echo 'For more information, see:'
+        echo '  http://doc.nuodb.com/Latest/Default.htm#About-Domain-Credentials.htm'
+        DOMAIN_USER=
+    fi
+done
+
+# Prompt for the Domain Password
+while [ -z "$DOMAIN_PWD" ]; do
+    ttysettings=$(stty -g) || die "Cannot access TTY"
+    trap 'stty "$ttysettings"' 0 2 9 15
+    stty -echo || die "Cannot hide password"
+    printf "Enter Domain password (? for help): "
+    IFS= read -r DOMAIN_PWD || die "Cannot read password"
+    echo
+    stty "$ttysettings"
+    trap - 0 2 9 15
+
+    if [ "$DOMAIN_PWD" = "?" ]; then
+        echo "Enter the password for the NuoDB Domain Administrator account \"$DOMAIN_USER\""
+        echo "For more information, see:"
+        echo "   http://doc.nuodb.com/Latest/Default.htm#About-Domain-Credentials.htm"
+        DOMAIN_PWD=
+    fi
+done
+
+
+cat <<EOF
+This script will set up a sample NuoDB database "$DBNAME"
+using domain user "$DOMAIN_USER".
+
+EOF
+
+# Be sure the agent is running
+"$NUODB_HOME"/etc/nuoagent start >/dev/null \
+    || die "The NuoDB agent is not running.  See:
+  http://doc.nuodb.com/Latest/Default.htm#Starting-and-Stopping-NuoDB-Services.htm
+for instructions on how to start it."
+
+nuomgr () {
+    nuodbmgr --user "$DOMAIN_USER" --password "$DOMAIN_PWD" --broker "$HOST" --command "$@"
+}
+
+# Make sure we can connect to the agent
+region=$(nuomgr "tags search name region")
+case $region in
+    (*"region ="*) : ok ;;
+    (*) die "Failed to connect to the NuoDB agent:
+$region" ;;
+esac
+
+isRunning () {
+    case $(nuomgr "show database processes database $DBNAME") in
+        (*"[$1] "*RUNNING*) return 0 ;;
+    esac
+    return 1
+}
+
+# Wait for node to be RUNNING
+waitForRunning () {
+    COUNTER=0
+    while [ $COUNTER -le 10 ]; do
+        show=$(nuomgr "show database processes database $DBNAME")
+        case $show in
+            (*"[$1] "*RUNNING*) return 0 ;;
+            (*"[$1] "*) : alive ;;
+            (*) die "$1 has stopped." ;;
+        esac
+        sleep 1
+        COUNTER=$(expr $COUNTER + 1)
+    done
+
+    return 1
+}
+
+
+# Create a Single Host database
+#
+
+echo "  Creating Database"
+
+search=$(nuomgr "tags search name archive_base")
+path=$(echo "$search" | sed -n 's/.*archive_base = //p')
+[ -n "$path" ] || die "Archive base path not found:
+$search"
+[ -d "$path" ] || die "Archive base path $path does not exist"
+archive="$path/$DBNAME"
+
+# Check to see if there is an SM already running before starting a new one
+if ! isRunning 'SM'; then
+    echo "   Starting Storage Manager"
+    SM_OUTPUT=$(nuomgr "start process sm host $HOST database $DBNAME archive $archive initialize true")
+    case $SM_OUTPUT in
+        (*'Cannot use the "--initialize" flag on an existing archive'*)
+            SM_OUTPUT=$(nuomgr "start process sm host $HOST database $DBNAME archive $archive initialize false") ;;
+    esac
+
+    waitForRunning SM || die "SM failed to start completely:
+$(nuomgr 'show domain summary')"
+fi
+
+
+# Check to see if there is a TE already running before starting a new one
+if ! isRunning 'TE'; then
+    echo "   Starting Transaction Engine"
+    TE_OUTPUT=$(nuomgr "start process te host $HOST database $DBNAME options '--dba-user $DBA_USER --dba-password $DBA_PWD'")
+fi
+
+# Wait for TE to be RUNNING
+waitForRunning TE || die "$DBNAME failed to start completely:
+$(nuomgr 'show domain summary')"
+
+
+sqlcmd () {
+    nuosql "$DBNAME" --user "$DBA_USER" --password "$DBA_PWD" --schema Hockey
+}
+
+echo "  Creating Sample Quickstart Schema"
+sqlcmd <"$NUODB_HOME"/samples/quickstart/sql/create-db.sql >/tmp/nuodb_quickstart_schema.log 2>&1 \
+    || die "Failed.  See /tmp/nuodb_quickstart_schema.log"
+
+# import quick start data
+#
+echo "  Importing Sample Quickstart Data"
+echo "   Importing Players table"
+sqlcmd <"$NUODB_HOME"/samples/quickstart/sql/Players.sql >/tmp/nuodb_quickstart_import.log 2>&1 \
+    || die "Failed.  See /tmp/nuodb_quickstart_import.log"
+
+echo "   Importing Scoring table"
+sqlcmd <"$NUODB_HOME"/samples/quickstart/sql/Scoring.sql >/tmp/nuodb_quickstart_import.log 2>&1 \
+    || die "Failed.  See /tmp/nuodb_quickstart_import.log"
+
+echo "   Importing Teams table"
+sqlcmd <"$NUODB_HOME"/samples/quickstart/sql/Teams.sql >/tmp/nuodb_quickstart_import.log 2>&1 \
+    || die "Failed.  See /tmp/nuodb_quickstart_import.log"
+
+cat <<EOF
+
+Starting an interactive SQL session with 'nuosql'
+
+  Database name: $DBNAME
+
+   DBA Username: $DBA_USER
+   DBA Password: $DBA_PWD
+
+Start executing SQL commands at the SQL prompt, such as:
+
+   SQL> show Teams;
+   SQL> select * from TEAMS where TEAMS.YEAR = 2011;
+
+or a more advanced query:
+
+   SQL> select p.lastName, p.firstName, s.year, s.teamID, s.gamesPlayed
+        from players p, scoring s
+        where p.birthCountry = 'Slovakia' and s.playerID = p.playerID
+        order by p.lastName;
+
+Use 'quit' or CTRL-D to quit nuosql.
+
+EOF
+
+# Run nuosql interactively so the user can play
+sqlcmd
+
+# Sum up.
+cat <<EOF
+-----
+nuosql has finished.  We've left the '$DBNAME' database running for you.
+
+Learn more:
+
+* Read the documentation online:
+    http://doc.nuodb.com/Latest/Default.htm
+
+* Experiment with the management system:
+    $NUODB_HOME/bin/nuodbmgr --user '$DOMAIN_USER' --password '$DOMAIN_PWD' --broker $HOST
+
+* Run nuosql:
+    $NUODB_HOME/bin/nuosql --user '$DBA_USER' --password '$DBA_PWD' --schema Hockey '$DBNAME'
+-----
+
+EOF
+
+exit 0
